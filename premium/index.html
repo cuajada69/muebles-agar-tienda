@@ -119,7 +119,7 @@ h1,h2,h3{font-family:var(--serif);font-weight:500;letter-spacing:-.01em;margin:0
 .res:empty{display:none}
 
 .grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:36px 22px;margin-top:28px}
-.prod{display:flex;flex-direction:column;animation:rise .4s var(--ease) both}@keyframes rise{from{opacity:.001;transform:translateY(14px)}}
+.prod{display:flex;flex-direction:column}
 .media{position:relative;border-radius:999px 999px 22px 22px/320px 320px 22px 22px;overflow:hidden;background:var(--line);aspect-ratio:4/5}
 .media::after{content:"";position:absolute;inset:7px;border:1.5px dashed rgba(226,200,143,.55);border-radius:inherit;pointer-events:none}
 .slides{display:flex;height:100%;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none}
@@ -471,9 +471,10 @@ function filtrados(){const t=norm(q).split(/\s+/).filter(Boolean);
   t.every(w=>norm(`${p.nombre} ${colName[p.col]} ${p.desc} ${p.tags.join(" ")}`).includes(w)))}
 const addHTML=i=>i?`${ICO.check}En tu lista`:`${ICO.plus}Agregar`;
 function card(p,k){const inL=!!list[p.id];
- return `<article class="prod" data-id="${p.id}" style="animation-delay:${Math.min(k%12,6)*30}ms">
+ // solo la 1.ª foto carga de entrada; las demás al tocar/deslizar (cargarlas todas trababa el cambio de pestaña en celular)
+ return `<article class="prod" data-id="${p.id}">
   <div class="media">
-   <div class="slides">${p.fotos.map((f,i)=>`<img src="img/g/${f}" alt="${esc(p.nombre)}, foto ${i+1}" loading="lazy" data-open>`).join("")}</div>
+   <div class="slides">${p.fotos.map((f,i)=>i?`<img data-src="img/g/${f}" data-alt="${esc(p.nombre)}, foto ${i+1}" alt="" data-open>`:`<img src="img/g/${f}" alt="${esc(p.nombre)}, foto 1" loading="lazy" decoding="async" data-open>`).join("")}</div>
    <div class="dots">${p.fotos.map((_,i)=>`<i class="${i?"":"on"}"></i>`).join("")}</div>
    ${p.armado?'<span class="flag">Fotos de armado</span>':p.col==="guaya"?'<span class="flag">Reclinable</span>':""}
   </div>
@@ -485,11 +486,15 @@ function render(desde=0){const L=filtrados();
  $("#titulo").textContent=col==="todo"?"Catálogo":colName[col];
  $("#res").textContent=q?`Resultados para «${q}»`:"";
  $("#cuenta").textContent=nRef(L.length);
- const html=L.slice(desde,shown).map((p,k)=>card(p,k)).join("");
- if(desde)$("#grid").insertAdjacentHTML("beforeend",html);else $("#grid").innerHTML=html;
+ const html=L.slice(desde,shown).map(card).join("");
+ if(desde)$("#grid").insertAdjacentHTML("beforeend",html);
+ else{$("#grid").innerHTML=html;if(!matchMedia("(prefers-reduced-motion:reduce)").matches)$("#grid").animate([{opacity:0,transform:"translateY(10px)"},{opacity:1,transform:"none"}],{duration:300,easing:"cubic-bezier(.22,1,.36,1)"})}
  $("#empty").hidden=L.length>0;$("#more").hidden=shown>=L.length;
- [...$$(".slides")].slice(desde).forEach(s=>s.addEventListener("scroll",()=>{const i=Math.round(s.scrollLeft/s.clientWidth);
-  s.nextElementSibling.querySelectorAll("i").forEach((d,k)=>d.classList.toggle("on",k===i))},{passive:true}))}
+ [...$$(".slides")].slice(desde).forEach(s=>{
+  const fill=()=>s.querySelectorAll("img[data-src]").forEach(i=>{i.src=i.dataset.src;i.alt=i.dataset.alt;i.removeAttribute("data-src")});
+  s.addEventListener("touchstart",fill,{passive:true,once:true});s.addEventListener("pointerenter",fill,{once:true});
+  s.addEventListener("scroll",()=>{fill();const i=Math.round(s.scrollLeft/s.clientWidth);
+   s.nextElementSibling.querySelectorAll("i").forEach((d,k)=>d.classList.toggle("on",k===i))},{passive:true})})}
 $("#more").onclick=()=>{shown+=12;render(shown-12)};
 $("#grid").onclick=e=>{const c=e.target.closest(".prod");if(!c)return;
  if(e.target.closest("[data-add]")){toggle(c.dataset.id);return}
