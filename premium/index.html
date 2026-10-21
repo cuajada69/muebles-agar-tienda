@@ -447,7 +447,18 @@ const cuantos=id=>P.filter(p=>p.col===id).length;
 $("#canales").innerHTML=DATA.cols.map((c,i)=>`<button class="canal${i?"":" on"}" data-canal="${c.id}" aria-label="${esc(c.nombre)}, ${nRef(cuantos(c.id))}">
  <img src="img/f/${c.img}" alt="" loading="lazy"><span class="lb">${esc(c.nombre)}</span>
  <span class="open"><b>${esc(c.nombre)}</b><span>${nRef(cuantos(c.id))} · Ver ${ICO.arrow}</span></span></button>`).join("");
-const canalOn=id=>$$(".canal").forEach(b=>{const on=b.dataset.canal===id;b.classList.toggle("on",on);if(on&&matchMedia("(max-width:760px)").matches)setTimeout(()=>{const c=$("#canales");c.scrollTo({left:b.offsetLeft-16,behavior:"smooth"})},120)});
+// curva de --ease (cubic-bezier .16,1,.3,1) para que el desplazamiento vaya al mismo ritmo que el cambio de ancho
+const ease=x=>{const B=(t,p,q)=>3*p*t*(1-t)**2+3*q*t*t*(1-t)+t**3;let lo=0,hi=1;
+ for(let i=0;i<20;i++){const m=(lo+hi)/2;B(m,.16,.3)<x?lo=m:hi=m}return B((lo+hi)/2,1,1)};
+// celular: lleva el canal elegido al borde izquierdo cuadro a cuadro mientras se abre
+// (antes un scroll suave aparte, con otro ritmo y destino calculado antes de encoger, hacía que la tira se devolviera)
+function seguir(b){const c=$("#canales");cancelAnimationFrame(seguir.raf);c.style.scrollSnapType="none";
+ const x=()=>b.getBoundingClientRect().left-c.getBoundingClientRect().left,x0=x(),x1=parseFloat(getComputedStyle(c).paddingLeft),t0=performance.now(),
+  dur=matchMedia("(prefers-reduced-motion:reduce)").matches?1:800;
+ const paso=t=>{const k=Math.min(1,(t-t0)/dur);c.scrollLeft+=x()-(x0+(x1-x0)*ease(k));
+  if(k<1)seguir.raf=requestAnimationFrame(paso);else c.style.scrollSnapType=""};
+ seguir.raf=requestAnimationFrame(paso)}
+const canalOn=id=>$$(".canal").forEach(b=>{const on=b.dataset.canal===id;b.classList.toggle("on",on);if(on&&matchMedia("(max-width:760px)").matches)seguir(b)});
 $("#canales").addEventListener("click",e=>{const b=e.target.closest(".canal");if(!b)return;
  if(!b.classList.contains("on")&&matchMedia("(hover:none)").matches){canalOn(b.dataset.canal);return}
  setCol(b.dataset.canal);$("#catalogo").scrollIntoView({behavior:"smooth"})});
