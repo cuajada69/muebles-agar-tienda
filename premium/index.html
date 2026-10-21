@@ -456,8 +456,11 @@ function seguir(b){const c=$("#canales");cancelAnimationFrame(seguir.raf);c.styl
  const x=()=>b.getBoundingClientRect().left-c.getBoundingClientRect().left,x0=x(),x1=parseFloat(getComputedStyle(c).paddingLeft),t0=performance.now(),
   dur=matchMedia("(prefers-reduced-motion:reduce)").matches?1:800;
  const paso=t=>{const k=Math.min(1,(t-t0)/dur);c.scrollLeft+=x()-(x0+(x1-x0)*ease(k));
-  if(k<1)seguir.raf=requestAnimationFrame(paso);else c.style.scrollSnapType=""};
+  if(k<1)seguir.raf=requestAnimationFrame(paso);else soltar()};
  seguir.raf=requestAnimationFrame(paso)}
+// si la persona desliza mientras se abre, el dedo manda: se detiene el movimiento automático
+function soltar(){cancelAnimationFrame(seguir.raf);seguir.raf=0;$("#canales").style.scrollSnapType=""}
+for(const t of ["touchstart","wheel"])$("#canales").addEventListener(t,()=>{if(seguir.raf)soltar()},{passive:true});
 const canalOn=id=>$$(".canal").forEach(b=>{const on=b.dataset.canal===id;b.classList.toggle("on",on);if(on&&matchMedia("(max-width:760px)").matches)seguir(b)});
 $("#canales").addEventListener("click",e=>{const b=e.target.closest(".canal");if(!b)return;
  if(!b.classList.contains("on")&&matchMedia("(hover:none)").matches){canalOn(b.dataset.canal);return}
